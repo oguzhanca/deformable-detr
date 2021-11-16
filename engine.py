@@ -34,11 +34,17 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     header = 'Epoch: [{}]'.format(epoch)
     print_freq = 10
 
-    prefetcher = data_prefetcher(data_loader, device, prefetch=True)
-    samples, targets = prefetcher.next()
+    ## Deformable DETR uses prefetcher below to load samples & targets
+    # prefetcher = data_prefetcher(data_loader, device, prefetch=True)
+    # samples, targets = prefetcher.next()
 
-    # for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
-    for _ in metric_logger.log_every(range(len(data_loader)), print_freq, header):
+    # for _ in metric_logger.log_every(range(len(data_loader)), print_freq, header):
+    for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
+
+        # move samples and labels to device
+        samples = samples.to(device)
+        targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+
         outputs = model(samples)
         loss_dict = criterion(outputs, targets)
         weight_dict = criterion.weight_dict
@@ -71,8 +77,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         metric_logger.update(class_error=loss_dict_reduced['class_error'])
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
         metric_logger.update(grad_norm=grad_total_norm)
-
-        samples, targets = prefetcher.next()
+        
+        # samples, targets = prefetcher.next()
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
     print("Averaged stats:", metric_logger)
