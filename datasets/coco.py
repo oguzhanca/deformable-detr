@@ -24,6 +24,7 @@ from util.misc import get_local_rank, get_local_size
 from PIL import Image
 import datasets.transforms as T
 import os
+import numpy as np
 
 
 class CocoDetection(TvCocoDetection):
@@ -44,16 +45,28 @@ class CocoDetection(TvCocoDetection):
 
 
 class KittiDetection(Dataset):
-    def __init__(self, root, transforms): #, return_masks):
-        self._transforms = transforms
+    def __init__(self, root, which_dataset): # transforms): #, return_masks):
+        # self._transforms = transforms
+        assert which_dataset in ['train', 'val', 'test'], "Dataset type must be one of: 'train', 'val', 'test' !"
+        self._transforms = make_kitti_transforms(which_dataset)
         self.root = root
         self.image_path = os.path.join(root, 'training/image_2')
         self.label_path = os.path.join(root, 'training/label_2')
+        self.splits_path = os.path.join(root, 'training/splits')
 
         self.kitti_obj_map = {'Car': 0, 'Van': 1, 'Truck': 2, 'Pedestrian': 3,
                                 'Person_sitting': 4, 'Cyclist': 5, 'Tram': 6}
 
-        self.ids = [i.split('.')[0] for i  in os.listdir(self.label_path)]
+        # self.ids = [i.split('.')[0] for i  in os.listdir(self.label_path)]
+
+        # Read the split file and create the list of ids
+        split_file = os.path.join(self.splits_path, which_dataset+'_split.txt')
+        assert os.path.isfile(split_file), f"Split file at {split_file} is not found!"
+        self.ids = list()
+        with open(split_file) as file:
+            for line in file:
+                self.ids.append(line.rstrip())
+
 
     def __getitem__(self, idx):
         img_path = os.path.join(self.image_path, self.ids[idx] + '.png')
@@ -270,5 +283,10 @@ def build_kitti(image_set, args):
     root = Path(args.coco_path)
     assert root.exists(), f'provided kitti path {root} does not exist'
 
-    dataset = KittiDetection(root, transforms=make_kitti_transforms(image_set))
+    label_path = os.path.join(root, 'training/label_2')
+    label_ids = [i.split('.')[0] for i  in os.listdir(label_path)]
+
+    # dataset = KittiDetection(root, transforms=make_kitti_transforms(image_set))
+    dataset = KittiDetection(root, which_dataset=image_set)
+
     return dataset
