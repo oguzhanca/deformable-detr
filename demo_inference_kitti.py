@@ -103,16 +103,23 @@ def plot_results(pil_img, prob, boxes, img_id):
     print(img_id, 'is saved.')
     # plt.show()
 
-# url = 'http://images.cocodataset.org/val2017/000000039769.jpg'
-# im = Image.open(requests.get(url, stream=True).raw)
-# img_path = '/mnt/lustre/public_datasets/kitti/training/image_2/000007.png'
+# num_imgs_to_infer = 200
+splits_path = os.path.join(kitti_dir, 'training/splits')
 
-num_imgs_to_infer = 200
-print('Inference is started for {} images..'.format(num_imgs_to_infer))
+split_file = os.path.join(splits_path, 'test_split.txt')
+assert os.path.isfile(split_file), f"Split file at {split_file} is not found!"
+
+# Read the label ids from the test split
+ids = list()
+with open(split_file) as file:
+    for line in file:
+        ids.append(line.rstrip())
+
+print('\nInference is started for {} images..'.format(len(ids)))
 start_time = time.time()
-for i in range(num_imgs_to_infer):
-    img_id = '{0:06d}'.format(i)
-    img_path = os.path.join(kitti_dir, 'testing/image_2/'+img_id+'.png')
+for img_id in ids:
+    # img_id = '{0:06d}'.format(i)
+    img_path = os.path.join(kitti_dir, 'training/image_2/'+img_id+'.png')
 
     im = Image.open(img_path)
 
@@ -122,5 +129,5 @@ for i in range(num_imgs_to_infer):
 
 total_time = time.time() - start_time
 total_time_str = str(datetime.timedelta(seconds=int(total_time)))
-print('Inference time took {} on {} images'.format(total_time_str, num_imgs_to_infer))
-print('FPS:', num_imgs_to_infer/total_time)
+print('Inference time took {} on {} images'.format(total_time_str, len(ids)))
+print('FPS:', len(ids)/total_time)
