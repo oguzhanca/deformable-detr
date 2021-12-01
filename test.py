@@ -13,8 +13,17 @@ model_path = 'exps/r50_deformable_detr_plus_iterative_bbox_refinement_plus_plus_
 
 gt_label_path = os.path.join(kitti_dir, 'training/label_2/')
 image_path = os.path.join(kitti_dir, 'training/image_2/')
-label_ids = os.listdir(gt_label_path)
-ids = sorted([id.split('.')[0] for id in label_ids])
+splits_path = os.path.join(kitti_dir, 'training/splits')
+
+split_file = os.path.join(splits_path, 'test_split.txt')
+assert os.path.isfile(split_file), f"Split file at {split_file} is not found!"
+
+# Read the label ids from the test split
+ids = list()
+with open(split_file) as file:
+    for line in file:
+        ids.append(line.rstrip())
+
 
 class_mapping = {
     0:'Car', 1:'Van', 2:'Truck', 3:'Pedestrian',
@@ -41,9 +50,9 @@ kitti_keys = ['name', 'truncated', 'occluded', 'alpha', 'bbox',
 gt_annos = []
 pred_annos = []
 
-print('\nInference started on the test set..\n')
+print(f'\nInference started on the test set with {len(ids)} samples..\n')
 
-for img_id in tqdm(ids[:500]):  # this should be changed with the test split
+for img_id in tqdm(ids):
 
     img_path = image_path+img_id+'.png'
     lbl_path = gt_label_path+img_id+'.txt'
@@ -81,7 +90,7 @@ for img_id in tqdm(ids[:500]):  # this should be changed with the test split
 print('\nCalculating the metric results...\n')
 
 # read the test labels into a dictionary
-gt_annos = data_utils.get_label_annos(gt_label_path)[:500]  # this should be changed with the test split
+gt_annos = data_utils.get_label_annos(gt_label_path, image_ids=ids)
 
 # Keep Car, Pedestrian, and Cyclist as the classes for validation and test
 # It needs minimum of 500 samples for a correct kitti evaluation
